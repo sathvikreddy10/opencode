@@ -5,7 +5,7 @@ import { List } from "@opencode-ai/ui/list"
 import type { ListRef } from "@opencode-ai/ui/list"
 import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
 import fuzzysort from "fuzzysort"
-import { createMemo, createResource, createSignal, For, Show } from "solid-js"
+import { createEffect, createMemo, createResource, createSignal, For, Show } from "solid-js"
 import { useGlobalSDK } from "@/context/global-sdk"
 import { useGlobalSync } from "@/context/global-sync"
 import { useLayout } from "@/context/layout"
@@ -311,6 +311,8 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const isMobile = () => window.innerWidth < 768
   const [browseMode, setBrowseMode] = createSignal(false)
   const [browsePath, setBrowsePath] = createSignal("")
+  const [browseItems, setBrowseItems] = createSignal<Row[]>([])
+  const [browseLoading, setBrowseLoading] = createSignal(false)
   const browseDirs = useBrowseDirs(sdk)
 
   const effectiveBrowsePath = createMemo(() => {
@@ -320,15 +322,20 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
     return s ? trimTrailing(s) : "/"
   })
 
-  const [browseItems] = createResource(
-    () => ({ path: effectiveBrowsePath(), enabled: browseMode() }),
-    async ({ path, enabled }) => {
-      if (!enabled) return []
-      const items = await browseDirs(path)
-      return items.map((item) => toRow(item.absolute, home(), "folders"))
-    },
-    { initialValue: [] },
-  )
+  // Manual fetch that actually works reliably
+  createEffect(() => {
+    const path = effectiveBrowsePath()
+    const enabled = browseMode()
+    if (!enabled) return
+
+    setBrowseLoading(true)
+    browseDirs(path)
+      .then((items) => {
+        setBrowseItems(items.map((item) => toRow(item.absolute, home(), "folders")))
+      })
+      .catch(() => setBrowseItems([]))
+      .finally(() => setBrowseLoading(false))
+  })
 
   const browseBreadcrumb = createMemo(() => {
     const path = effectiveBrowsePath()
@@ -523,7 +530,7 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
 
           {/* Directory listing */}
           <div class="flex-1 overflow-y-auto">
-            <Show when={!browseItems.loading} fallback={
+            <Show when={!browseLoading()} fallback={
               <div class="p-4 text-14-regular text-text-weak text-center">{language.t("common.loading")}</div>
             }>
               <Show when={browseItems().length > 0} fallback={
@@ -536,7 +543,6 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
                         <button
                           class="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-surface-raised-base-hover active:bg-surface-raised-stronger-base transition-colors"
                           onClick={() => navigateBrowse(item.absolute)}
-                          onDblClick={() => resolve(item.absolute)}
                         >
                           <FileIcon node={{ path: item.absolute, type: "directory" }} class="shrink-0 size-5" />
                           <div class="flex flex-col min-w-0">
@@ -552,14 +558,20 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
             </Show>
           </div>
 
-          {/* Select current button */}
-          <div class="p-3 border-t border-border-weak-base">
+          {/* Start session confirmation */}
+          <div class="p-3 border-t border-border-weak-base flex flex-col gap-2">
+            <div class="text-12-regular text-text-weak text-center">
+              {language.t("dialog.directory.currentPath")}: <span class="text-text-strong font-mono">{effectiveBrowsePath()}</span>
+            </div>
             <Button
               size="large"
+              variant="primary"
               class="w-full"
-              onClick={() => resolve(effectiveBrowsePath())}
+              onClick={() => {
+                resolve(effectiveBrowsePath())
+              }}
             >
-              {language.t("dialog.directory.selectCurrent", { path: getFilename(effectiveBrowsePath()) || effectiveBrowsePath() })}
+              {language.t("dialog.directory.startSession", { path: getFilename(effectiveBrowsePath()) || effectiveBrowsePath() })}
             </Button>
           </div>
         </div>

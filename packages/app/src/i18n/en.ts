@@ -315,6 +315,8 @@ export const dict = {
   "dialog.directory.selectCurrent": "Select {{path}}",
   "dialog.directory.searchMode": "Switch to search",
   "dialog.directory.browseMode": "Browse folders",
+  "dialog.directory.currentPath": "Current path",
+  "dialog.directory.startSession": "Start Session in {{path}}",
 
   "app.server.unreachable": "Could not reach {{server}}",
   "app.server.retrying": "Retrying automatically...",

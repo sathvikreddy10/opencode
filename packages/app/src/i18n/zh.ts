@@ -330,6 +330,8 @@ export const dict = {
   "dialog.directory.selectCurrent": "选择 {{path}}",
   "dialog.directory.searchMode": "切换搜索",
   "dialog.directory.browseMode": "浏览文件夹",
+  "dialog.directory.currentPath": "当前路径",
+  "dialog.directory.startSession": "在 {{path}} 开始会话",
 
   "dialog.server.title": "服务器",
   "dialog.server.description": "切换此应用连接的 OpenCode 服务器。",
