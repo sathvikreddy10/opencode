@@ -8,6 +8,7 @@ import { createSdkForServer } from "@/utils/server"
 import { useLanguage } from "./language"
 import { usePlatform } from "./platform"
 import { useServer } from "./server"
+import { MobileLogger } from "@/utils/mobile-logger"
 
 const abortError = z.object({
   name: z.literal("AbortError"),
@@ -111,6 +112,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     const HEARTBEAT_TIMEOUT_MS = 15_000
     let lastEventAt = Date.now()
     let heartbeat: ReturnType<typeof setTimeout> | undefined
+    let connectAttempt = 0
     const resetHeartbeat = () => {
       lastEventAt = Date.now()
       if (heartbeat) clearTimeout(heartbeat)
@@ -127,22 +129,26 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     const start = () => {
       if (started) return run
       started = true
+      MobileLogger.connection.sseOpen(currentServer.http.url)
       run = (async () => {
         // oxlint-disable-next-line no-unmodified-loop-condition -- `started` is set to false by stop() which also aborts; both flags are checked to allow graceful exit
         while (!abort.signal.aborted && started) {
           attempt = new AbortController()
           lastEventAt = Date.now()
+          connectAttempt += 1
           const onAbort = () => {
             attempt?.abort()
           }
           abort.signal.addEventListener("abort", onAbort)
           try {
+            MobileLogger.connection.sseOpen(`${currentServer.http.url} (attempt ${connectAttempt})`)
             const events = await eventSdk.global.event({
               signal: attempt.signal,
               onSseError: (error) => {
                 if (aborted(error)) return
                 if (streamErrorLogged) return
                 streamErrorLogged = true
+                MobileLogger.connection.sseError(currentServer.http.url, error)
                 console.error("[global-sdk] event stream error", {
                   url: currentServer.http.url,
                   fetch: eventFetch ? "platform" : "webview",
@@ -161,6 +167,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
               }
 
               const payload = event.payload as Event
+              MobileLogger.connection.sseEvent(payload.type, directory, payload.properties)
 
               const k = key(directory, payload)
               if (k) {
@@ -185,6 +192,7 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
           } catch (error) {
             if (!aborted(error) && !streamErrorLogged) {
               streamErrorLogged = true
+              MobileLogger.connection.sseError(currentServer.http.url, error)
               console.error("[global-sdk] event stream failed", {
                 url: currentServer.http.url,
                 fetch: eventFetch ? "platform" : "webview",
@@ -197,7 +205,11 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
             clearHeartbeat()
           }
 
-          if (abort.signal.aborted || !started) return
+          if (abort.signal.aborted || !started) {
+            MobileLogger.connection.sseClose(currentServer.http.url, "aborted or stopped")
+            return
+          }
+          MobileLogger.connection.reconnectScheduled(RECONNECT_DELAY_MS, `attempt ${connectAttempt} failed`)
           await wait(RECONNECT_DELAY_MS)
         }
       })().finally(() => {

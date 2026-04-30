@@ -40,7 +40,12 @@ export function TerminalPanel() {
     view: typeof window === "undefined" ? 1000 : (window.visualViewport?.height ?? window.innerHeight),
   })
 
-  const max = () => store.view * 0.6
+  const isMobile = () => store.view < 768
+  const max = () => {
+    // On mobile, cap terminal at 40% of viewport so user can still see session
+    const cap = isMobile() ? 0.4 : 0.6
+    return store.view * cap
+  }
   const pane = () => Math.min(height(), max())
 
   onMount(() => {
@@ -210,6 +215,25 @@ export function TerminalPanel() {
             }}
             onCollapse={close}
           />
+        </div>
+        {/* Mobile drag handle: swipe down to close terminal */}
+        <div
+          class="md:hidden h-6 w-full flex items-center justify-center shrink-0 bg-background-stronger border-b border-border-weaker-base"
+          onTouchStart={(e) => {
+            const startY = e.touches[0].clientY
+            const onMove = (ev: TouchEvent) => {
+              const dy = ev.touches[0].clientY - startY
+              if (dy > 80) close()
+            }
+            const onEnd = () => {
+              window.removeEventListener("touchmove", onMove)
+              window.removeEventListener("touchend", onEnd)
+            }
+            window.addEventListener("touchmove", onMove)
+            window.addEventListener("touchend", onEnd)
+          }}
+        >
+          <div class="w-12 h-1 rounded-full bg-border-weak-base" />
         </div>
         <Show
           when={terminal.ready()}

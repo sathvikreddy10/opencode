@@ -915,4 +915,11 @@ export const dict = {
   "error.childStore.persistedProjectIconCreateFailed": "创建持久化项目图标失败",
   "error.childStore.storeCreateFailed": "创建存储失败",
   "terminal.connectionLost.abnormalClose": "WebSocket 异常关闭：{{code}}",
+
+  "connection.idle": "空闲",
+  "connection.connecting": "连接中…",
+  "connection.connected": "已连接",
+  "connection.disconnected": "已断开",
+  "connection.reconnecting": "重新连接中…",
+  "connection.unreachable": "无法访问",
 } satisfies Partial<Record<Keys, string>>

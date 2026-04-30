@@ -450,19 +450,23 @@ export default function Layout(props: ParentProps) {
         ) {
           const props = e.details.properties as { sessionID: string }
           const sessionKey = `${e.name}:${props.sessionID}`
+          console.log("[OPENCODE][NOTIFY] Dismissing alert:", sessionKey, "event:", e.details.type)
           dismissSessionAlert(sessionKey)
           return
         }
 
         if (e.details?.type !== "permission.asked" && e.details?.type !== "question.asked") return
-        const title =
-          e.details.type === "permission.asked"
-            ? language.t("notification.permission.title")
-            : language.t("notification.question.title")
-        const icon = e.details.type === "permission.asked" ? ("checklist" as const) : ("bubble-5" as const)
+        const isPermission = e.details.type === "permission.asked"
+        const title = isPermission
+          ? language.t("notification.permission.title")
+          : language.t("notification.question.title")
+        const icon = isPermission ? ("checklist" as const) : ("bubble-5" as const)
         const directory = e.name
         const props = e.details.properties
-        if (e.details.type === "permission.asked" && permission.autoResponds(e.details.properties, directory)) return
+        if (isPermission && permission.autoResponds(e.details.properties, directory)) {
+          console.log("[OPENCODE][NOTIFY] Permission auto-responded, skipping alert")
+          return
+        }
 
         const [store] = globalSync.child(directory, { bootstrap: false })
         const session = store.session.find((s) => s.id === props.sessionID)
@@ -470,28 +474,52 @@ export default function Layout(props: ParentProps) {
 
         const sessionTitle = session?.title ?? language.t("command.session.new")
         const projectName = getFilename(directory)
-        const description =
-          e.details.type === "permission.asked"
-            ? language.t("notification.permission.description", { sessionTitle, projectName })
-            : language.t("notification.question.description", { sessionTitle, projectName })
+        const description = isPermission
+          ? language.t("notification.permission.description", { sessionTitle, projectName })
+          : language.t("notification.question.description", { sessionTitle, projectName })
         const href = `/${base64Encode(directory)}/session/${props.sessionID}`
 
         const now = Date.now()
         const lastAlerted = alertedAtBySession.get(sessionKey) ?? 0
-        if (now - lastAlerted < cooldownMs) return
+        if (now - lastAlerted < cooldownMs) {
+          console.log("[OPENCODE][NOTIFY] Cooldown active, skipping:", sessionKey)
+          return
+        }
         alertedAtBySession.set(sessionKey, now)
 
-        if (e.details.type === "permission.asked") {
+        console.log("[OPENCODE][NOTIFY] User input needed:", {
+          type: e.details.type,
+          sessionKey,
+          sessionTitle,
+          directory,
+          currentDir: currentDir(),
+          currentSession: params.id,
+          isMobile: window.innerWidth < 768,
+          visibility: document.visibilityState,
+        })
+
+        // ALWAYS play sound when user input is needed — this is critical for
+        // Tailscale/mobile use cases where the user might be on another device
+        // or app and needs to know the agent is waiting.
+        if (isPermission) {
           if (settings.sounds.permissionsEnabled()) {
+            console.log("[OPENCODE][NOTIFY] Playing permission sound")
             void playSoundById(settings.sounds.permissions())
           }
           if (settings.notifications.permissions()) {
+            console.log("[OPENCODE][NOTIFY] Sending permission notification")
             void platform.notify(title, description, href)
           }
         }
 
         if (e.details.type === "question.asked") {
+          // Also play a sound for questions so the user knows to respond
+          if (settings.sounds.agentEnabled()) {
+            console.log("[OPENCODE][NOTIFY] Playing question sound")
+            void playSoundById(settings.sounds.agent())
+          }
           if (settings.notifications.agent()) {
+            console.log("[OPENCODE][NOTIFY] Sending question notification")
             void platform.notify(title, description, href)
           }
         }

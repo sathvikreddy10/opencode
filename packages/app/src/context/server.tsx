@@ -3,6 +3,7 @@ import { type Accessor, batch, createEffect, createMemo, onCleanup } from "solid
 import { createStore } from "solid-js/store"
 import { Persist, persisted } from "@/utils/persist"
 import { useCheckServerHealth } from "@/utils/server-health"
+import { MobileLogger } from "@/utils/mobile-logger"
 
 type StoredProject = { worktree: string; expanded: boolean }
 type StoredServer = string | ServerConnection.HttpBase | ServerConnection.Http
@@ -135,30 +136,76 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
       return [...deduped.values()]
     })
 
+    type ConnectionState = "idle" | "connecting" | "connected" | "disconnected" | "reconnecting" | "unreachable"
+
     const [state, setState] = createStore({
       active: props.defaultServer,
       healthy: undefined as boolean | undefined,
+      connectionState: "idle" as ConnectionState,
+      lastHealthyAt: undefined as number | undefined,
+      lastError: undefined as string | undefined,
+      healthCheckCount: 0,
     })
 
     const healthy = () => state.healthy
+    const connectionState = () => state.connectionState
+
+    function setConnectionState(next: ConnectionState, error?: string) {
+      const prev = state.connectionState
+      if (prev === next && !error) return
+      MobileLogger.connection.stateChange(prev, next, { server: state.active, error })
+      batch(() => {
+        setState("connectionState", next)
+        if (error) setState("lastError", error)
+        if (next === "connected") {
+          setState("lastHealthyAt", Date.now())
+          setState("lastError", undefined)
+        }
+      })
+    }
 
     function startHealthPolling(conn: ServerConnection.Any) {
       let alive = true
       let busy = false
+      let attempt = 0
 
       const run = () => {
         if (busy) return
         busy = true
+        setState("healthCheckCount", (c) => c + 1)
+        MobileLogger.connection.healthCheckStart(conn.http.url)
         void check(conn)
           .then((next) => {
             if (!alive) return
+            if (next) {
+              const wasDisconnected = state.connectionState === "disconnected" || state.connectionState === "unreachable"
+              setConnectionState(wasDisconnected ? "reconnecting" : "connected")
+              // After a brief moment in reconnecting, settle to connected
+              if (wasDisconnected) {
+                window.setTimeout(() => {
+                  if (!alive) return
+                  if (state.healthy) setConnectionState("connected")
+                }, 500)
+              }
+            } else {
+              setConnectionState(attempt > 2 ? "unreachable" : "disconnected", "Health check returned unhealthy")
+            }
             setState("healthy", next)
+          })
+          .catch((err) => {
+            if (!alive) return
+            const message = err instanceof Error ? err.message : String(err)
+            MobileLogger.connection.healthCheckError(conn.http.url, err)
+            setConnectionState(attempt > 2 ? "unreachable" : "disconnected", message)
+            setState("healthy", false)
           })
           .finally(() => {
             busy = false
+            attempt += 1
           })
       }
 
+      setConnectionState("connecting")
       run()
       const interval = setInterval(run, HEALTH_POLL_INTERVAL_MS)
       return () => {
@@ -227,6 +274,10 @@ export const { use: useServer, provider: ServerProvider } = createSimpleContext(
     return {
       ready: isReady,
       healthy,
+      connectionState,
+      lastHealthyAt: () => state.lastHealthyAt,
+      lastError: () => state.lastError,
+      healthCheckCount: () => state.healthCheckCount,
       isLocal,
       get key() {
         return state.active

@@ -17,7 +17,13 @@
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+
+    "start": "bun run --cwd packages/opencode --conditions=browser src/index.ts serve --hostname 0.0.0.0 --port 4096",
+    "start:local": "bun run --cwd packages/opencode --conditions=browser src/index.ts serve --port 4096",
+    "tui": "bun run --cwd packages/opencode --conditions=browser src/index.ts attach http://localhost:4096",
+    "web": "bun --cwd packages/app dev",
+    "mobile": "bun --cwd packages/app dev"
   },
   "workspaces": {
     "packages": [

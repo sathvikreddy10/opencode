@@ -124,6 +124,214 @@ If you're interested in contributing to OpenCode, please read our [contributing 
 
 If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
 
+### OpenCode-v1 (Development / Mobile Sync Mode)
+
+This fork adds **mobile-friendly web UI** with **Tailscale support** so you can run OpenCode on your laptop and control it from your phone anywhere.
+
+> **Important:** The wrapper script is at `packages/opencode/bin/opencode-v1.cmd` **inside the repo**. You must run it from the repo root, or use the full path.
+
+---
+
+#### Where is Everything?
+
+```
+C:\Users\sathv\Desktop\Opencode-v1\opencode       ← REPO ROOT (run commands from here)
+├── packages/
+│   ├── opencode/
+│   │   ├── bin/
+│   │   │   ├── opencode-v1          ← Unix wrapper
+│   │   │   └── opencode-v1.cmd      ← Windows wrapper ← RUN THIS
+│   │   └── src/
+│   │       └── index.ts             ← Main entry point
+│   └── app/
+│       └── src/
+│           └── entry.tsx            ← Web app entry
+```
+
+**Rule:** Always run commands from `C:\Users\sathv\Desktop\Opencode-v1\opencode` (the repo root).
+
+---
+
+#### Basic Terminal Usage (Same as `opencode`)
+
+**Start TUI in current project folder:**
+```cmd
+:: Make sure you are in the repo root
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+
+:: Start the TUI directly (no mobile access)
+packages\opencode\bin\opencode-v1.cmd
+```
+
+**Start server for mobile + TUI access:**
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+
+:: Start the backend + web UI on port 4096
+packages\opencode\bin\opencode-v1.cmd serve --hostname 0.0.0.0 --port 4096
+```
+
+You will see:
+```
+opencode server listening on http://0.0.0.0:4096
+```
+
+**Attach TUI to a running server:**
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+
+:: Attach TUI to the server you just started
+packages\opencode\bin\opencode-v1.cmd attach http://localhost:4096
+```
+
+---
+
+#### Common Mistake: Wrong Directory
+
+**WRONG** — you are inside `packages\opencode` and trying to use the full path:
+```cmd
+C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode> packages\opencode\bin\opencode-v1.cmd
+'packages' is not recognized as an internal or external command
+```
+
+**RIGHT** — either go back to repo root, or use relative path from where you are:
+```cmd
+C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode> bin\opencode-v1.cmd
+```
+
+Or:
+```cmd
+C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode> cd ..\..
+C:\Users\sathv\Desktop\Opencode-v1\opencode> packages\opencode\bin\opencode-v1.cmd
+```
+
+---
+
+#### Step-by-Step: Mobile Access
+
+**1. Build the web app** (one time, from repo root):
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+cd packages\app
+bun run build
+cd ..\..
+```
+
+**2. Start the server** (from repo root):
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+packages\opencode\bin\opencode-v1.cmd serve --hostname 0.0.0.0 --port 4096
+```
+
+**3. Find your laptop's IP** (new terminal):
+```cmd
+ipconfig
+:: Look for "IPv4 Address" under your WiFi adapter
+:: Example: 192.168.1.42
+```
+
+**4. Open on your phone:**
+- Same WiFi: `http://192.168.1.42:4096`
+- Tailscale: `http://100.x.y.z:4096` (run `tailscale ip -4` to get this)
+
+> **No CORS config needed** — Tailscale IPs and `*.ts.net` domains are auto-allowed.
+
+---
+
+#### Using in Your Own Project Folders
+
+The server uses the **current working directory** as the project folder.
+
+```cmd
+:: Example: work on a different project
+cd C:\Users\sathv\my-project
+
+:: Option A: Use the full path to the wrapper
+C:\Users\sathv\my-project> C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode\bin\opencode-v1.cmd
+
+:: Option B: Add the bin folder to your PATH once, then just type:
+C:\Users\sathv\my-project> opencode-v1.cmd
+```
+
+**To add to PATH (one time):**
+```cmd
+setx PATH "%PATH%;C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode\bin"
+:: Then restart your terminal
+```
+
+---
+
+#### Development Mode (Editing the Web UI)
+
+If you want to change the web UI and see live reload:
+
+**Terminal 1 — Backend** (from repo root):
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode
+packages\opencode\bin\opencode-v1.cmd serve --hostname 0.0.0.0 --port 4096
+```
+
+**Terminal 2 — Vite Dev Server** (from repo root):
+```cmd
+cd C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\app
+bun dev --host
+```
+
+**On your phone:** Open `http://<laptop-ip>:3000`
+
+The Vite dev server on port 3000 proxies API calls to `localhost:4096` automatically.
+
+---
+
+#### Command Reference
+
+| Command | What it does | Where to run |
+|---------|-------------|--------------|
+| `opencode-v1.cmd` | Start TUI in current folder | Repo root or any folder (with full path) |
+| `opencode-v1.cmd serve` | Start headless server + web UI | Repo root |
+| `opencode-v1.cmd attach <url>` | Attach TUI to a running server | Repo root |
+| `opencode-v1.cmd web` | Start server + open browser | Repo root |
+| `opencode-v1.cmd run "msg"` | One-shot command | Any folder |
+
+---
+
+#### Mobile Features
+
+- **Connection status indicator** in the titlebar (green = connected, yellow = reconnecting, red = unreachable)
+- **Browser notifications** with sound alerts when the agent needs your input
+- **Terminal on mobile** — swipe down the drag handle to close
+- **Debug bar toggle** — hidden by default on mobile, tap the console icon (bottom-left) to show
+- **Aggressive logging** — open DevTools on your phone to see `[OPENCODE]` prefixed logs
+
+---
+
+#### Architecture
+
+```
+                    Laptop                                  Mobile
+         ┌─────────────────────────────┐              ┌──────────────┐
+         │  opencode-v1 serve :4096    │              │              │
+         │  ┌─────────────────────┐    │◄── WiFi ────►│   Browser    │
+         │  │   Backend Server    │    │   or LAN     │   Web UI     │
+         │  │  (AI agent + files) │    │              │              │
+         │  └─────────────────────┘    │◄─ Tailscale ─►│ Connection   │
+         │           ▲                 │              │   Status     │
+         │           │                 │              │ Notifications│
+         │  ┌────────┴────────┐        │              │   Terminal   │
+         │  │  TUI (optional) │        │              └──────────────┘
+         │  │ opencode-v1     │        │
+         │  │ attach :4096    │        │
+         │  └─────────────────┘        │
+         └─────────────────────────────┘
+```
+
+- The **backend server** is the brain — it runs the AI, manages files, and handles the terminal
+- The **web UI** and **TUI** are just views — they connect to the same server
+- Sessions, files, and terminal state are **fully synced** across all clients
+- You can have the TUI open on your laptop AND the web UI on your phone simultaneously
+
+---
+
 ### FAQ
 
 #### How is this different from Claude Code?

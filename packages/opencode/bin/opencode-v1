@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+/**
+ * Local dev wrapper for opencode from source.
+ */
+
+import { spawnSync } from "child_process"
+import { fileURLToPath } from "url"
+import path from "path"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const src = path.join(__dirname, "..", "src", "index.ts")
+
+const bunPath = process.platform === "win32"
+  ? "C:\\Users\\sathv\\AppData\\Roaming\\npm\\bun.cmd"
+  : "bun"
+
+const result = spawnSync(
+  bunPath,
+  ["run", "--conditions=browser", src, ...process.argv.slice(2)],
+  {
+    stdio: "inherit",
+    cwd: path.dirname(src),
+    shell: process.platform === "win32",
+  },
+)
+
+if (result.error) {
+  console.error(result.error.message)
+  process.exit(1)
+}
+
+process.exit(typeof result.status === "number" ? result.status : 0)

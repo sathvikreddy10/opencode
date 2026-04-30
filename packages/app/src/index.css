@@ -82,4 +82,18 @@
       opacity: 1;
     }
   }
+
+  /* Mobile-friendly touch targets */
+  @media (max-width: 767px) {
+    [data-component="icon-button"],
+    [data-component="button"] {
+      min-height: 36px;
+      min-width: 36px;
+    }
+
+    /* Ensure terminal text is readable on mobile */
+    .xterm-screen {
+      font-size: 12px !important;
+    }
+  }
 }

@@ -66,10 +66,24 @@ export function LoggerMiddleware(backendAttributes: ServerBackend.Attributes): M
   }
 }
 
+function isTailscaleIP(input: string): boolean {
+  // Tailscale assigns IPs in the 100.64.0.0/10 CGNAT range
+  const match = input.match(/^https?:\/\/(\d+)\.(\d+)\.(\d+)\.(\d+)(:\d+)?$/)
+  if (!match) return false
+  const [, a, b] = match.map(Number)
+  if (a === undefined || b === undefined) return false
+  return a === 100 && b >= 64 && b <= 127
+}
+
+function isTailscaleMagicDNS(input: string): boolean {
+  // Tailscale Magic DNS domains: *.ts.net, *.tailnet-name.ts.net, etc.
+  return /^https?:\/\/([a-z0-9-]+\.)*ts\.net(:\d+)?$/.test(input)
+}
+
 export function CorsMiddleware(opts?: { cors?: string[] }): MiddlewareHandler {
   return cors({
     maxAge: 86_400,
-    origin(input) {
+    origin(input, ctx) {
       if (!input) return
 
       if (input.startsWith("http://localhost:")) return input
@@ -79,6 +93,16 @@ export function CorsMiddleware(opts?: { cors?: string[] }): MiddlewareHandler {
 
       if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) return input
       if (opts?.cors?.includes(input)) return input
+
+      // Auto-allow Tailscale connections so users don't need to configure CORS
+      if (isTailscaleIP(input)) {
+        log.info("cors: allowed tailscale ip", { origin: input, path: ctx.req.path })
+        return input
+      }
+      if (isTailscaleMagicDNS(input)) {
+        log.info("cors: allowed tailscale magic dns", { origin: input, path: ctx.req.path })
+        return input
+      }
     },
   })
 }
