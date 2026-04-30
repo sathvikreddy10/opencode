@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Opencode Mobile Launcher</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117;
+      --bg-secondary: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-dim: #8b949e;
+      --text-bright: #f0f6fc;
+      --accent: #58a6ff;
+      --accent-hover: #79c0ff;
+      --folder: #58a6ff;
+      --file: #8b949e;
+      --success: #3fb950;
+      --warning: #d29922;
+    }
+    body {
+      font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Header / Prompt */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+    .prompt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .prompt-user { color: var(--success); }
+    .prompt-host { color: var(--warning); }
+    .prompt-path { color: var(--accent); }
+    .prompt-arrow { color: var(--text-dim); }
+    /* Breadcrumb */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      padding-bottom: 4px;
+    }
+    .breadcrumb::-webkit-scrollbar { display: none; }
+    .crumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .crumb-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .crumb-btn:hover { background: rgba(88, 166, 255, 0.1); }
+    .crumb-sep { color: var(--text-dim); font-size: 11px; }
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .tool-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .tool-btn:active { transform: scale(0.97); }
+    /* File list */
+    .file-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      min-height: 48px;
+    }
+    .file-item:hover { background: rgba(88, 166, 255, 0.05); }
+    .file-item:active { background: rgba(88, 166, 255, 0.1); }
+    .file-icon {
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .file-icon.folder { color: var(--folder); }
+    .file-icon.file { color: var(--file); }
+    .file-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .file-name {
+      font-size: 14px;
+      color: var(--text-bright);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .file-item.file-item-file { opacity: 0.6; }
+    /* Loading / Empty */
+    .status-msg {
+      padding: 40px 16px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    /* Bottom bar */
+    .bottom-bar {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+    .current-path {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .current-path code {
+      color: var(--accent);
+      font-family: inherit;
+    }
+    .start-btn {
+      width: 100%;
+      background: var(--success);
+      color: #000;
+      border: none;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .start-btn:hover { filter: brightness(1.1); }
+    .start-btn:active { transform: scale(0.98); }
+    .start-btn:disabled {
+      background: var(--border);
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .file-item { animation: fadeIn 0.1s ease-out; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="prompt">
+      <span class="prompt-user">user</span>
+      <span class="prompt-arrow">@</span>
+      <span class="prompt-host">laptop</span>
+      <span class="prompt-arrow">:</span>
+      <span class="prompt-path" id="prompt-path">~</span>
+      <span class="prompt-arrow">$</span>
+      <span style="color: var(--text-dim)">ls</span>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool-btn" onclick="goUp()">
+      <span>../</span> up
+    </button>
+    <button class="tool-btn" onclick="goHome()">
+      <span>~</span> home
+    </button>
+    <button class="tool-btn" onclick="refresh()">
+      <span>refresh</span>
+    </button>
+  </div>
+
+  <div class="file-list" id="file-list">
+    <div class="status-msg">Loading...</div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="current-path">current: <code id="current-path">/</code></div>
+    <button class="start-btn" id="start-btn" onclick="startSession()">
+      Start Session Here
+    </button>
+  </div>
+
+  <script>
+    // State
+    let currentPath = ''
+    let homePath = ''
+    let isLoading = false
+
+    // Init
+    async function init() {
+      // Try to get home path from the backend
+      try {
+        const res = await fetch('/path')
+        if (res.ok) {
+          const data = await res.json()
+          homePath = data.home || data.directory || '/'
+        }
+      } catch (e) {
+        console.log('Could not fetch home path, using default')
+      }
+      if (!homePath) homePath = '/Users/sathv'
+      currentPath = homePath
+      await loadDir(currentPath)
+    }
+
+    // Load directory contents
+    async function loadDir(dir) {
+      if (isLoading) return
+      isLoading = true
+
+      const list = document.getElementById('file-list')
+      list.innerHTML = '<div class="status-msg">Loading...</div>'
+
+      try {
+        const res = await fetch(`/file?directory=${encodeURIComponent(dir)}&path=`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const items = await res.json()
+        renderItems(items, dir)
+      } catch (err) {
+        list.innerHTML = `<div class="status-msg">Error: ${err.message}</div>`
+      } finally {
+        isLoading = false
+      }
+    }
+
+    // Render file list
+    function renderItems(items, dir) {
+      currentPath = dir
+      updateUI()
+
+      const list = document.getElementById('file-list')
+      if (!items || items.length === 0) {
+        list.innerHTML = '<div class="status-msg">empty directory</div>'
+        return
+      }
+
+      // Sort: directories first, then alphabetically
+      const sorted = [...items].sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
+
+      list.innerHTML = sorted.map(item => {
+        const isDir = item.type === 'directory'
+        const icon = isDir ? '<span class="file-icon folder">&#128193;</span>' : '<span class="file-icon file">&#128196;</span>'
+        const cls = isDir ? '' : 'file-item-file'
+        const onclick = isDir ? `onclick="enterDir('${escapeJs(item.absolute)}')"` : ''
+        return `
+          <div class="file-item ${cls}" ${onclick}>
+            ${icon}
+            <div class="file-info">
+              <div class="file-name">${escapeHtml(item.name)}${isDir ? '/' : ''}</div>
+              <div class="file-meta">${escapeHtml(item.absolute)}</div>
+            </div>
+          </div>
+        `
+      }).join('')
+    }
+
+    // Update prompt, breadcrumb, path display
+    function updateUI() {
+      // Prompt path
+      const prompt = document.getElementById('prompt-path')
+      prompt.textContent = formatPath(currentPath)
+
+      // Current path display
+      document.getElementById('current-path').textContent = currentPath
+
+      // Breadcrumb
+      renderBreadcrumb()
+    }
+
+    // Format path with ~ shorthand
+    function formatPath(path) {
+      if (homePath && path.toLowerCase().startsWith(homePath.toLowerCase())) {
+        return '~' + path.slice(homePath.length)
+      }
+      return path
+    }
+
+    // Render breadcrumb
+    function renderBreadcrumb() {
+      const container = document.getElementById('breadcrumb')
+      const parts = []
+
+      if (homePath && currentPath.toLowerCase().startsWith(homePath.toLowerCase())) {
+        parts.push({ label: '~', path: homePath })
+        let remaining = currentPath.slice(homePath.length).replace(/^\/+/, '')
+        let current = homePath
+        for (const part of remaining.split('/').filter(Boolean)) {
+          current = current ? `${current}/${part}` : part
+          parts.push({ label: part, path: current })
+        }
+      } else {
+        let current = ''
+        for (const part of currentPath.split('/').filter(Boolean)) {
+          current = current ? `${current}/${part}` : part
+          parts.push({ label: part, path: current })
+        }
+      }
+
+      container.innerHTML = parts.map((part, i) => `
+        <span class="crumb">
+          ${i > 0 ? '<span class="crumb-sep">/</span>' : ''}
+          <button class="crumb-btn" onclick="jumpTo('${escapeJs(part.path)}')">${escapeHtml(part.label)}</button>
+        </span>
+      `).join('')
+    }
+
+    // Navigation
+    function enterDir(path) {
+      loadDir(path)
+    }
+
+    function jumpTo(path) {
+      loadDir(path)
+    }
+
+    function goUp() {
+      const parts = currentPath.split('/').filter(Boolean)
+      if (parts.length <= 1) return
+      parts.pop()
+      const parent = '/' + parts.join('/')
+      loadDir(parent)
+    }
+
+    function goHome() {
+      loadDir(homePath)
+    }
+
+    function refresh() {
+      loadDir(currentPath)
+    }
+
+    // Start session
+    function startSession() {
+      // Base64 encode the path for opencode URL
+      const encoded = btoa(currentPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+      // Navigate to opencode session page
+      window.location.href = `/${encoded}/session`
+    }
+
+    // Utilities
+    function escapeHtml(str) {
+      const div = document.createElement('div')
+      div.textContent = str
+      return div.innerHTML
+    }
+
+    function escapeJs(str) {
+      return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n')
+    }
+
+    // Start
+    init()
+  </script>
+</body>
+</html>
