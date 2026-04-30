@@ -31,6 +31,7 @@ import { ToolRegistry } from "@/tool/registry"
 import { lazy } from "@/util/lazy"
 import { Vcs } from "@/project/vcs"
 import { Worktree } from "@/worktree"
+import { isAllowedCorsOrigin } from "@/server/cors"
 import { InstanceHttpApi, RootHttpApi } from "./api"
 import { authorizationLayer } from "./middleware/authorization"
 import { eventRoute } from "./event"
@@ -68,17 +69,8 @@ const runtime = HttpRouter.middleware()(
   ),
 ).layer
 
-function allowedCorsOrigin(input: string | undefined) {
-  if (!input) return false
-  if (input.startsWith("http://localhost:")) return true
-  if (input.startsWith("http://127.0.0.1:")) return true
-  if (input === "tauri://localhost" || input === "http://tauri.localhost" || input === "https://tauri.localhost")
-    return true
-  return /^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)
-}
-
 const cors = HttpRouter.middleware(HttpMiddleware.cors({
-  allowedOrigins: allowedCorsOrigin,
+  allowedOrigins: isAllowedCorsOrigin,
   maxAge: 86_400,
 }), { global: true })
 
