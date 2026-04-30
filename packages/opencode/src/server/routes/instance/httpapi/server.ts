@@ -49,6 +49,7 @@ import { questionHandlers } from "./handlers/question"
 import { sessionHandlers } from "./handlers/session"
 import { syncHandlers } from "./handlers/sync"
 import { tuiHandlers } from "./handlers/tui"
+import { v2Handlers, V2Api } from "./v2"
 import { workspaceHandlers } from "./handlers/workspace"
 import { instanceContextLayer, instanceRouterMiddleware } from "./middleware/instance-context"
 import { workspaceRouterMiddleware, workspaceRoutingLayer } from "./middleware/workspace-routing"
@@ -70,23 +71,26 @@ const runtime = HttpRouter.middleware()(
 ).layer
 
 const rootApiRoutes = HttpApiBuilder.layer(RootHttpApi).pipe(Layer.provide([controlHandlers, globalHandlers]))
-const instanceApiRoutes = HttpApiBuilder.layer(InstanceHttpApi).pipe(
-  Layer.provide([
-    configHandlers,
-    experimentalHandlers,
-    fileHandlers,
-    instanceHandlers,
-    mcpHandlers,
-    projectHandlers,
-    ptyHandlers,
-    questionHandlers,
-    permissionHandlers,
-    providerHandlers,
-    sessionHandlers,
-    syncHandlers,
-    tuiHandlers,
-    workspaceHandlers,
-  ]),
+const instanceApiRoutes = Layer.mergeAll(
+  HttpApiBuilder.layer(InstanceHttpApi).pipe(
+    Layer.provide([
+      configHandlers,
+      experimentalHandlers,
+      fileHandlers,
+      instanceHandlers,
+      mcpHandlers,
+      projectHandlers,
+      ptyHandlers,
+      questionHandlers,
+      permissionHandlers,
+      providerHandlers,
+      sessionHandlers,
+      syncHandlers,
+      tuiHandlers,
+      workspaceHandlers,
+    ]),
+  ),
+  HttpApiBuilder.layer(V2Api).pipe(Layer.provide(v2Handlers)),
 )
 
 const rawInstanceRoutes = Layer.mergeAll(eventRoute, ptyConnectRoute).pipe(
