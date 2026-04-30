@@ -325,6 +325,11 @@ export const dict = {
 
   "dialog.directory.search.placeholder": "搜索文件夹",
   "dialog.directory.empty": "未找到文件夹",
+  "dialog.directory.up": "上一级",
+  "dialog.directory.home": "主目录",
+  "dialog.directory.selectCurrent": "选择 {{path}}",
+  "dialog.directory.searchMode": "切换搜索",
+  "dialog.directory.browseMode": "浏览文件夹",
 
   "dialog.server.title": "服务器",
   "dialog.server.description": "切换此应用连接的 OpenCode 服务器。",
@@ -495,6 +500,10 @@ export const dict = {
   "home.recentProjects": "最近项目",
   "home.empty.title": "没有最近项目",
   "home.empty.description": "通过打开本地项目开始使用",
+  "home.empty.homedir": "主目录: {{path}}",
+  "home.mobile.browseHint": "点击上方浏览您笔记本电脑的文件夹并选择工作目录。",
+  "home.mobile.selectDir": "选择工作目录",
+  "home.mobile.currentPath": "当前路径:",
 
   "session.tab.session": "会话",
   "session.tab.review": "审查",

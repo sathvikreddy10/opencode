@@ -310,6 +310,11 @@ export const dict = {
 
   "dialog.directory.search.placeholder": "Search folders",
   "dialog.directory.empty": "No folders found",
+  "dialog.directory.up": "Go up",
+  "dialog.directory.home": "Go home",
+  "dialog.directory.selectCurrent": "Select {{path}}",
+  "dialog.directory.searchMode": "Switch to search",
+  "dialog.directory.browseMode": "Browse folders",
 
   "app.server.unreachable": "Could not reach {{server}}",
   "app.server.retrying": "Retrying automatically...",
@@ -520,6 +525,10 @@ export const dict = {
   "home.recentProjects": "Recent projects",
   "home.empty.title": "No recent projects",
   "home.empty.description": "Get started by opening a local project",
+  "home.empty.homedir": "Home: {{path}}",
+  "home.mobile.browseHint": "Tap above to browse your laptop's folders and select a working directory.",
+  "home.mobile.selectDir": "Select Working Directory",
+  "home.mobile.currentPath": "Current:",
 
   "session.tab.session": "Session",
   "session.tab.review": "Review",

@@ -68,6 +68,8 @@ export default function Home() {
     }
   }
 
+  const isMobile = () => window.innerWidth < 768
+
   return (
     <div class="mx-auto mt-55 w-full md:w-auto px-4">
       <Logo class="md:w-xl opacity-12" />
@@ -127,10 +129,22 @@ export default function Home() {
             <div class="flex flex-col gap-1 items-center justify-center">
               <div class="text-14-medium text-text-strong">{language.t("home.empty.title")}</div>
               <div class="text-12-regular text-text-weak">{language.t("home.empty.description")}</div>
+              {isMobile() && homedir() && (
+                <div class="text-11-regular text-text-weak mt-1">{language.t("home.empty.homedir", { path: homedir() })}</div>
+              )}
             </div>
-            <Button class="px-3 mt-1" onClick={chooseProject}>
+            <Button
+              class="px-3 mt-1"
+              size={isMobile() ? "large" : "normal"}
+              onClick={chooseProject}
+            >
               {language.t("command.project.open")}
             </Button>
+            {isMobile() && (
+              <div class="text-11-regular text-text-weak text-center max-w-xs mt-2">
+                {language.t("home.mobile.browseHint")}
+              </div>
+            )}
           </div>
         </Match>
       </Switch>
