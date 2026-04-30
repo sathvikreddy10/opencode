@@ -152,6 +152,25 @@ C:\Users\sathv\Desktop\Opencode-v1\opencode       ← REPO ROOT (run commands fr
 
 ---
 
+#### Quick Setup: Add `opencode-v1` to Your PATH
+
+**One-time setup** so you can use `opencode-v1` from any folder (just like `opencode`):
+
+```cmd
+setx PATH "%PATH%;C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode\bin"
+```
+
+**Restart your terminal** (close and reopen CMD/PowerShell), then from any project folder:
+
+```cmd
+cd C:\Users\sathv\Desktop\MyProject
+opencode-v1.cmd                          # Start TUI
+opencode-v1.cmd serve --hostname 0.0.0.0 --port 4096   # Start server
+opencode-v1.cmd run "explain this code"                # One-shot command
+```
+
+---
+
 #### Basic Terminal Usage (Same as `opencode`)
 
 **Start TUI in current project folder:**
@@ -185,6 +204,22 @@ packages\opencode\bin\opencode-v1.cmd attach http://localhost:4096
 ```
 
 ---
+
+#### Make It Easier: Add to PATH
+
+Run this **once** to type `opencode-v1` from any folder:
+
+```cmd
+setx PATH "%PATH%;C:\Users\sathv\Desktop\Opencode-v1\opencode\packages\opencode\bin"
+```
+
+**Restart your terminal** (close and reopen). Then from any folder:
+
+```cmd
+cd C:\Users\sathv\Desktop\MyProject
+opencode-v1.cmd                          # Start TUI here
+opencode-v1.cmd serve --hostname 0.0.0.0 --port 4096   # Start server
+```
 
 #### Common Mistake: Wrong Directory
 
