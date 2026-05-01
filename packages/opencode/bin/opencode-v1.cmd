@@ -6,7 +6,8 @@ set "SCRIPT_DIR=%~dp0"
 set "SRC=%SCRIPT_DIR%..\src\index.ts"
 set "BUN=C:\Users\sathv\AppData\Roaming\npm\bun.cmd"
 
-:: Must run from the opencode package directory so bun resolves dependencies correctly
-cd /d "%SCRIPT_DIR%.."
+:: IMPORTANT: Do NOT cd anywhere. 
+:: The TUI needs the current working directory to be the user's project folder.
+:: Bun will resolve the script and its imports via the monorepo workspace config.
 
-"%BUN%" run --conditions=browser "%SRC%" %*
+"%BUN%" run "%SRC%" %*
