@@ -19,7 +19,6 @@ const result = spawnSync(
   ["run", "--conditions=browser", src, ...process.argv.slice(2)],
   {
     stdio: "inherit",
-    cwd: path.dirname(src),
     shell: process.platform === "win32",
   },
 )
