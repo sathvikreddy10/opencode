@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * Local dev wrapper for opencode from source.
+ * Cleans up zombie processes before starting.
  */
 
-import { spawn } from "child_process"
+import { spawn, execSync } from "child_process"
 import { fileURLToPath } from "url"
 import path from "path"
 
@@ -13,6 +14,18 @@ const src = path.join(__dirname, "..", "src", "index.ts")
 const bunPath = process.platform === "win32"
   ? "C:\\Users\\sathv\\AppData\\Roaming\\npm\\bun.cmd"
   : "bun"
+
+// Kill any existing bun processes on port 4096
+if (process.platform === "win32") {
+  try {
+    execSync(
+      `for /f "tokens=5" %a in ('netstat -ano ^| findstr :4096 ^| findstr LISTENING') do taskkill /F /PID %a 2>nul`,
+      { shell: "cmd.exe", stdio: "ignore" }
+    )
+  } catch {
+    // Ignore errors if no process found
+  }
+}
 
 const child = spawn(
   bunPath,
