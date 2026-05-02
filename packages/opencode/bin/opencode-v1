@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Local dev wrapper for opencode from source.
- * Cleans up zombie processes before starting.
+ * Smart: attaches to existing backend or starts standalone TUI.
  */
 
 import { spawn, execSync } from "child_process"
@@ -15,21 +15,34 @@ const bunPath = process.platform === "win32"
   ? "C:\\Users\\sathv\\AppData\\Roaming\\npm\\bun.cmd"
   : "bun"
 
-// Kill any existing bun processes on port 4096
-if (process.platform === "win32") {
+function isBackendRunning() {
+  if (process.platform !== "win32") return false
   try {
-    execSync(
-      `for /f "tokens=5" %a in ('netstat -ano ^| findstr :4096 ^| findstr LISTENING') do taskkill /F /PID %a 2>nul`,
-      { shell: "cmd.exe", stdio: "ignore" }
+    const result = execSync(
+      'netstat -ano | findstr :4096 | findstr LISTENING',
+      { shell: "cmd.exe", stdio: ["pipe", "pipe", "pipe"] }
     )
+    return result.length > 0
   } catch {
-    // Ignore errors if no process found
+    return false
   }
+}
+
+const backendRunning = isBackendRunning()
+const args = process.argv.slice(2)
+const cmdArgs = backendRunning
+  ? ["run", "--conditions=browser", src, "attach", "http://localhost:4096", ...args]
+  : ["run", "--conditions=browser", src, ...args]
+
+if (backendRunning) {
+  console.log("[opencode-v1] Backend detected on port 4096, attaching TUI...")
+} else {
+  console.log("[opencode-v1] Starting TUI with embedded server...")
 }
 
 const child = spawn(
   bunPath,
-  ["run", "--conditions=browser", src, ...process.argv.slice(2)],
+  cmdArgs,
   {
     stdio: "inherit",
     shell: process.platform === "win32",
