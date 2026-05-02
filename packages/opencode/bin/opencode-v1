@@ -3,7 +3,7 @@
  * Local dev wrapper for opencode from source.
  */
 
-import { spawnSync } from "child_process"
+import { spawn } from "child_process"
 import { fileURLToPath } from "url"
 import path from "path"
 
@@ -14,7 +14,7 @@ const bunPath = process.platform === "win32"
   ? "C:\\Users\\sathv\\AppData\\Roaming\\npm\\bun.cmd"
   : "bun"
 
-const result = spawnSync(
+const child = spawn(
   bunPath,
   ["run", "--conditions=browser", src, ...process.argv.slice(2)],
   {
@@ -23,9 +23,11 @@ const result = spawnSync(
   },
 )
 
-if (result.error) {
-  console.error(result.error.message)
+child.on("error", (err) => {
+  console.error(err.message)
   process.exit(1)
-}
+})
 
-process.exit(typeof result.status === "number" ? result.status : 0)
+child.on("exit", (code) => {
+  process.exit(code ?? 0)
+})
